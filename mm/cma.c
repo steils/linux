@@ -78,6 +78,36 @@ unsigned long cma_get_size(struct cma *cma)
 	return cma->count << PAGE_SHIFT;
 }
 
+unsigned long cma_get_used(struct cma *cma)
+{
+	unsigned long ret = 0;
+
+	mutex_lock(&cma->lock);
+	/* pages counter is smaller than sizeof(int) */
+	ret = bitmap_weight(cma->bitmap, (int)cma->count);
+	mutex_unlock(&cma->lock);
+
+	return ret << (PAGE_SHIFT + cma->order_per_bit);
+}
+
+unsigned long cma_get_maxchunk(struct cma *cma)
+{
+	unsigned long maxchunk = 0;
+	unsigned long start, end = 0;
+
+	mutex_lock(&cma->lock);
+	for (;;) {
+		start = find_next_zero_bit(cma->bitmap, cma->count, end);
+		if (start >= cma->count)
+			break;
+		end = find_next_bit(cma->bitmap, cma->count, start);
+		maxchunk = max(end - start, maxchunk);
+	}
+	mutex_unlock(&cma->lock);
+
+	return maxchunk << (PAGE_SHIFT + cma->order_per_bit);
+}
+
 static unsigned long cma_bitmap_aligned_mask(struct cma *cma, int align_order)
 {
 	if (align_order <= cma->order_per_bit)
@@ -591,6 +621,10 @@ static int s_show(struct seq_file *m, void *p)
 	struct cma_buffer *cmabuf;
 	struct stack_trace trace;
 
+	seq_printf(m, "CMARegion stat: %8lu kB total, %8lu kB used, %8lu kB max contiguous chunk\n\n",
+		   cma_get_size(cma) >> 10,
+		   cma_get_used(cma) >> 10,
+		   cma_get_maxchunk(cma) >> 10);
 	mutex_lock(&cma->list_lock);
 
 	list_for_each_entry(cmabuf, &cma->buffers_list, list) {
