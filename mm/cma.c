@@ -128,6 +128,10 @@ static int __init cma_activate_area(struct cma *cma)
 	INIT_HLIST_HEAD(&cma->mem_head);
 	spin_lock_init(&cma->mem_head_lock);
 #endif
+#ifdef CONFIG_CMA_BUFFER_LIST
+	INIT_LIST_HEAD(&cma->buffer_list);
+	mutex_init(&cma->list_lock);
+#endif
 
 	return 0;
 
@@ -410,8 +414,10 @@ struct page *cma_alloc(struct cma *cma, int count, unsigned int align)
 		start = bitmap_no + mask + 1;
 	}
 
-	if (page)
+	if (page) {
 		trace_cma_alloc(cma, pfn, count);
+		cma_buffer_list_add(cma, pfn, count);
+	}
 
 	pr_debug("%s(): returned %p\n", __func__, page);
 	return page;
@@ -446,6 +452,7 @@ bool cma_release(struct cma *cma, struct page *pages, int count)
 	free_contig_range(pfn, count);
 	cma_clear_bitmap(cma, pfn, count);
 	trace_cma_release(cma, pfn, count);
+	cma_buffer_list_del(cma, pfn, count);
 
 	return true;
 }
