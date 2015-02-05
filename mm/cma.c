@@ -467,7 +467,7 @@ bool cma_release(struct cma *cma, struct page *pages, int count)
 	if (!cma || !pages)
 		return false;
 
-	pr_debug("%s(page %p)\n", __func__, (void *)pages);
+	pr_debug("%s(page %p, count %d)\n", __func__, (void *)pages, count);
 
 	pfn = page_to_pfn(pages);
 
