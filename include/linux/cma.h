@@ -28,4 +28,13 @@ extern int cma_init_reserved_mem(phys_addr_t base,
 					struct cma **res_cma);
 extern struct page *cma_alloc(struct cma *cma, int count, unsigned int align);
 extern bool cma_release(struct cma *cma, struct page *pages, int count);
+
+#ifdef CONFIG_CMA_DEBUGFS
+extern int cma_buffer_list_add(struct cma *cma, unsigned long pfn, int count);
+extern void cma_buffer_list_del(struct cma *cma, unsigned long pfn, int count);
+#else
+#define cma_buffer_list_add(cma, pfn, count) { }
+#define cma_buffer_list_del(cma, pfn, count) { }
+#endif
+
 #endif
