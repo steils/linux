@@ -23,6 +23,7 @@
 #  define DEBUG
 #endif
 #endif
+#define CREATE_TRACE_POINTS
 
 #include <linux/memblock.h>
 #include <linux/err.h>
@@ -37,6 +38,7 @@
 #include <linux/list.h>
 #include <linux/proc_fs.h>
 #include <linux/time.h>
+#include <trace/events/cma.h>
 
 #include "cma.h"
 
@@ -443,8 +445,10 @@ struct page *cma_alloc(struct cma *cma, int count, unsigned int align)
 		start = bitmap_no + mask + 1;
 	}
 
-	if (page)
+	if (page) {
 		cma_buffer_list_add(cma, pfn, count);
+		trace_cma_alloc(cma, pfn, count);
+	}
 
 	pr_debug("%s(): returned %p\n", __func__, page);
 	return page;
@@ -478,6 +482,7 @@ bool cma_release(struct cma *cma, struct page *pages, int count)
 
 	free_contig_range(pfn, count);
 	cma_clear_bitmap(cma, pfn, count);
+	trace_cma_release(cma, pfn, count);
 	cma_buffer_list_del(cma, pfn, count);
 
 	return true;
